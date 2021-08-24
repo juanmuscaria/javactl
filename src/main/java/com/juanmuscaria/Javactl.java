@@ -112,6 +112,8 @@ class CommandCreate implements Runnable {
 class CommandConnect implements Runnable {
     @Option(names = {"--name", "-n"}, description = "The daemon name.", required = true)
     String name;
+    @Option(names = {"--useCat", "-c"}, description = "Journalctl will be configured to use cat as it's output.")
+    boolean useCat;
 
     @Override
     public void run() {
@@ -120,7 +122,7 @@ class CommandConnect implements Runnable {
                 throw new IllegalArgumentException("Service is not running!");
             if (IService.SERVICE.getSocketFileFor(name).isEmpty())
                 throw new IllegalArgumentException("Unable to find service socket!");
-            new VirtualTerminal(name).start();
+            new VirtualTerminal(name, useCat).start();
             System.exit(0);
         } catch (IllegalArgumentException e) {
             System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));

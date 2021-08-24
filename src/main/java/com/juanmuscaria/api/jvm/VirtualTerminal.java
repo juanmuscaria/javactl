@@ -22,12 +22,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class VirtualTerminal {
     final String name;
+    private boolean useCat;
     private final AtomicBoolean stop = new AtomicBoolean(false);
     File socket;
 
-    public VirtualTerminal(String name) {
+    public VirtualTerminal(String name, boolean useCat) {
         socket = IService.SERVICE.getSocketFileFor(name).orElseThrow();
         this.name = name;
+        this.useCat = useCat;
     }
 
     @SneakyThrows
@@ -50,24 +52,24 @@ public class VirtualTerminal {
             Process journal = null;
             try {
                 BufferedReader bufferedReader;
-                journal = makeJournal(true).start();
+                journal = makeJournal(useCat).start();
                 bufferedReader = new BufferedReader(new InputStreamReader(journal.getInputStream()));
                 String line;
                 while ((journal.isAlive() && (line = bufferedReader.readLine()) != null)) {
-                    terminal.writer().print(line + "\n");
-                    terminal.writer().flush();
+                    reader.printAbove(line + "\n");
                 }
             } catch (Throwable e) {
-                terminal.writer().println(e.getMessage());
+                reader.printAbove(e.getMessage());
                 if (journal != null && journal.isAlive())
                     journal.destroy();
+                stop.set(true);
             }
         });
         journalReader.setDaemon(true);
         journalReader.start();
         while (true) {
             try {
-                String line = reader.readLine("");
+                String line = reader.readLine(name+" > ");
                 socketIo.write(line.getBytes());
                 socketIo.write('\n');
                 socketIo.flush();
@@ -85,7 +87,7 @@ public class VirtualTerminal {
 
     private ProcessBuilder makeJournal(boolean useCat) {
         ProcessBuilder b = new ProcessBuilder();
-        List<String> command = new ArrayList<>(Arrays.asList("journalctl", "-u", "javactl-" + name + ".service", "-b", "-f"));
+        List<String> command = new ArrayList<>(Arrays.asList("journalctl", "-u", "javactl-" + name + ".service", "-b", "-f", "-a"));
         if (useCat)
             command.addAll(Arrays.asList("--output", "cat"));
         b.command(command);
