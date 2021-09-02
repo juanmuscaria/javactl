@@ -10,14 +10,19 @@ import io.micronaut.configuration.picocli.PicocliRunner;
 import picocli.AutoComplete;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 import java.io.File;
+import java.util.List;
 
 import static com.juanmuscaria.Javactl.checkEnvironment;
+import static com.juanmuscaria.Javactl.warnPrivilegedAction;
 import static picocli.CommandLine.Help.Ansi.AUTO;
 
 @Command(name = "javactl", version = "0.1", description = "Command line utility to make and control java daemons.",
-        mixinStandardHelpOptions = true, subcommands = {AutoComplete.GenerateCompletion.class, CommandCreate.class, CommandConnect.class})
+        mixinStandardHelpOptions = true,
+        subcommands = { AutoComplete.GenerateCompletion.class, CommandCreate.class, CommandConnect.class,
+                CommandList.class, CommandStart.class, CommandStop.class, CommandRestart.class, CommandDelete.class })
 public class Javactl implements Runnable {
 
     public static void main(String[] args) throws Exception {
@@ -100,6 +105,7 @@ class CommandCreate implements Runnable {
                     .autoRestart(autoRestart);
             File[] files = builder.build();
             System.out.println("Service created as: " + files[0].getName());
+            System.out.println("Enable it using javactl enable " + name);
             System.exit(0);
         } catch (IllegalArgumentException e) {
             System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
@@ -110,13 +116,13 @@ class CommandCreate implements Runnable {
 
 @Command(name = "connect", description = "Connects to a running java service allowing you to gather information about the jvm and control over the input stream.", mixinStandardHelpOptions = true)
 class CommandConnect implements Runnable {
-    @Option(names = {"--name", "-n"}, description = "The daemon name.", required = true)
-    String name;
     @Option(names = {"--useCat", "-c"}, description = "Journalctl will be configured to use cat as it's output.")
     boolean useCat;
-
+    @Parameters(paramLabel = "name", description = "The daemon name.")
+    String name;
     @Override
     public void run() {
+        checkEnvironment();
         try {
             if (!IService.SERVICE.isServiceRunning(name))
                 throw new IllegalArgumentException("Service is not running!");
@@ -124,6 +130,104 @@ class CommandConnect implements Runnable {
                 throw new IllegalArgumentException("Unable to find service socket!");
             new VirtualTerminal(name, useCat).start();
             System.exit(0);
+        } catch (IllegalArgumentException e) {
+            System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
+            System.exit(2);
+        }
+    }
+}
+
+@Command(name = "list", description = "List all installed daemons.", mixinStandardHelpOptions = true)
+class CommandList implements Runnable {
+
+    @Override
+    public void run() {
+        checkEnvironment();
+        try {
+            List<String> services = IService.SERVICE.getInstalledServices();
+            if (services.isEmpty()) {
+                System.out.println(AUTO.string("@|red No services installed!|@"));
+            }
+            for (String service : services) {
+                boolean isRunning = IService.SERVICE.isServiceRunning(service);
+                System.out.println(service + " - " + (isRunning?"Running":"Stopped"));
+            }
+        } catch (IllegalArgumentException e) {
+            System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
+            System.exit(2);
+        }
+    }
+}
+
+@Command(name = "start", description = "Start a daemon.", mixinStandardHelpOptions = true)
+class CommandStart implements Runnable {
+    @Parameters(paramLabel = "name", description = "The daemon name.")
+    String name;
+
+    @Override
+    public void run() {
+        warnPrivilegedAction();
+        try {
+            if (IService.SERVICE.getServiceFileFor(name).isEmpty())
+                throw new IllegalArgumentException("Service '" + name + "' does not exist.");
+            IService.SERVICE.startService(name);
+        } catch (IllegalArgumentException e) {
+            System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
+            System.exit(2);
+        }
+    }
+}
+
+@Command(name = "stop", description = "Stop a daemon.", mixinStandardHelpOptions = true)
+class CommandStop implements Runnable {
+    @Parameters(paramLabel = "name", description = "The daemon name.")
+    String name;
+
+    @Override
+    public void run() {
+        warnPrivilegedAction();
+        try {
+            if (IService.SERVICE.getServiceFileFor(name).isEmpty())
+                throw new IllegalArgumentException("Service '" + name + "' does not exist.");
+            IService.SERVICE.stopService(name);
+        } catch (IllegalArgumentException e) {
+            System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
+            System.exit(2);
+        }
+    }
+}
+
+@Command(name = "restart", description = "(Re)start a daemon.", mixinStandardHelpOptions = true)
+class CommandRestart implements Runnable{
+    @Parameters(paramLabel = "name", description = "The daemon name.")
+    String name;
+
+    @Override
+    public void run() {
+        warnPrivilegedAction();
+        try {
+            if (IService.SERVICE.getServiceFileFor(name).isEmpty())
+                throw new IllegalArgumentException("Service '" + name + "' does not exist.");
+            IService.SERVICE.restartService(name);
+        } catch (IllegalArgumentException e) {
+            System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
+            System.exit(2);
+        }
+    }
+}
+
+@Command(name = "delete", aliases = "uninstall", description = "Stop and delete a daemon configuration.", mixinStandardHelpOptions = true)
+class CommandDelete implements Runnable {
+    @Parameters(paramLabel = "name", description = "The daemon name.")
+    String name;
+
+    @Override
+    public void run() {
+        warnPrivilegedAction();
+        try {
+            if (IService.SERVICE.getServiceFileFor(name).isEmpty())
+                throw new IllegalArgumentException("Service '" + name + "' does not exist.");
+            IService.SERVICE.deleteService(name);
         } catch (IllegalArgumentException e) {
             System.err.println(AUTO.string("@|red " + e.getMessage() + "|@"));
             System.exit(2);

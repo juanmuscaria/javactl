@@ -4,6 +4,7 @@ import com.juanmuscaria.impl.Systemd;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -37,4 +38,18 @@ public interface IService {
     default String getValidationRules() {
         return "^[a-zA-Z0-9\\s]+$";
     }
+
+    List<String> getInstalledServices();
+
+    void startService(String name);
+
+    void stopService(String name);
+
+    void restartService(String name);
+
+    void deleteService(String name);
+
+    void enableService(String name);
+
+    void disableService(String name);
 }

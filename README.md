@@ -15,10 +15,10 @@ Running `javactl` without any argument will perform a basic environment check to
 
 ## Todo list
 - [ ] Improve `javactl connect` virtual terminal.
-- [ ] A way to list all java daemons.  
+- [x] A way to list all java daemons.  
 - [ ] `javactl install` to allow the installation of java programs that provides metadata about how it should be installed.
 - [ ] Better error messages and handling.
-- [ ] Wrapper for common systemctl commands.
+- [x] Wrapper for common systemctl commands.
 - [ ] Better root detection.
 - [ ] Support for colors on `javactl connect`.
 - [ ] Custom ppa and native image for release.  
