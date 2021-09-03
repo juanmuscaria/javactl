@@ -11,7 +11,7 @@ public class JavaInstallation {
 
     // Creates the probe to detect more information about the java installation
     static {
-        InputStream probeClass = JavaInstallation.class.getResourceAsStream("/probe/JavaProbe.class");
+        InputStream probeClass = JavaInstallation.class.getResourceAsStream("/probe/JavaProbe.bin");
         if (probeClass == null)
             throw new IllegalStateException("Unable to extract java probe");
 
@@ -29,7 +29,8 @@ public class JavaInstallation {
             probeClass.close();
             out.close();
         } catch (IOException e) {
-            throw new IllegalStateException("Unable to extract java probe", e);
+            e.printStackTrace();
+            throw new IllegalStateException("Unable to extract java probe");
         }
         probe = tmp;
 
