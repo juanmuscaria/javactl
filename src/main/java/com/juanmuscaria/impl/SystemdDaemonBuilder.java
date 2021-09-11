@@ -88,7 +88,7 @@ public class SystemdDaemonBuilder implements IDaemonBuilder {
         if (!jar.exists())
             throw new IllegalArgumentException("The specified jar file does not exist!");
         if (workingDir == null)
-            workingDir = jar.getParentFile();
+            workingDir = jar.getAbsoluteFile().getParentFile();
         if (description == null || description.isBlank())
             description = name;
         if (args == null)
